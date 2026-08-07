@@ -41,11 +41,12 @@ PHP Docker Image configuration,
 Nginx Configuration,
 Mysql and Redis service configuration,
 Docker containers successfully started.
+Laravel 11 Installation completed
+Configured database and Redis connection
+Laravel environment configuration completed
 
 Next Steps:
 
-Laravel 11 Installation
-Configure database and Redis connection
 Implement authentication and authorization
 Develop Task Management module
 Build dynamic rule-based task assignment engine
@@ -69,6 +70,3 @@ docker composer down
 ## licence
 
 This project mainly created for technical evolution process
-
-
-
