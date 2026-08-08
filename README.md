@@ -44,14 +44,65 @@ Docker containers successfully started.
 Laravel 11 Installation completed
 Configured database and Redis connection
 Laravel environment configuration completed
+- User registration and login
+- Laravel Sanctum authentication
+- Logout and profile API
+- Role-based middleware
+- Admin user seeder
+- User profile attributes
+- Task migration
+- Task assignment rules migration
 
 Next Steps:
 
-Implement authentication and authorization
-Develop Task Management module
-Build dynamic rule-based task assignment engine
-Configure queue processing
-Develop AngularJS frontend
+- Task CRUD
+- Task assignment rules API
+- Dynamic eligibility engine
+- Background queue processing
+- Assignment result handling
+- Testing
+- AngularJS frontend
+
+## Docker Infrastructure
+
+The project uses Docker Compose with the following services:
+
+- PHP 8.3 / PHP-FPM
+- Nginx
+- MySQL 8
+- Redis
+- Queue worker
+
+## Authentication
+
+Laravel Sanctum is used for API authentication.
+
+Available authentication APIs:
+
+POST /api/register
+
+POST /api/login
+
+POST /api/logout
+
+GET /api/profile
+
+## Authorization
+
+Role-based middleware is implemented for restricting admin-only operations.
+
+Current roles:
+
+- admin
+- manager
+- user
+
+Example:
+
+```php
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    // Admin-only routes
+});
 
 ## Runing the Project
 
