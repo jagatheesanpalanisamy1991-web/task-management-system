@@ -14,35 +14,18 @@ return new class extends Migration
         Schema::create('task_assignment_rules', function (Blueprint $table) {
             $table->id();
             $table->foreignId('task_id')
-                ->unique()
-                ->constrained()
-                ->cascadeOnDelete();
-            $table->enum('department', [
-                'finance',
-                'hr',
-                'it',
-                'operation'
-            ])->nullable();
-            $table->unsignedSmallInteger('minimum_experience')
-                ->default(0);
-            $table->string('location')
-                ->nullable();
-            $table->unsignedTinyInteger('maximum_active_tasks')
-                ->default(5);
-            $table->foreignId('created_by')
-                ->constrained('users')
-                ->cascadeOnDelete();
+                  ->constrained()
+                  ->cascadeOnDelete();
+            $table->string('rule_attribute');
+            $table->string('rule_operator');
+            $table->string('rule_value');
+            
             $table->timestamps();
-            $table->index(
-                [
-                    'department',
-                    'location',
-                    'minimum_experience',
-                    'maximum_active_tasks'
-                ],
-                'idx_task_rule_engine'
+            $table->unique(
+                ['task_id', 'rule_attribute'],
+                'uq_task_rule_attribute'
             );
-            $table->index('created_at');
+            $table->index('task_id', 'idx_task_rules_task_id');
         });
     }
 

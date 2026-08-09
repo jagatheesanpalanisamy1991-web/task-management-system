@@ -26,9 +26,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['role', 'department', 'years_experience', 'location']);
             $table->dropIndex('idx_users_rule_matching');
-
+            $table->dropColumn(['role', 'department', 'years_experience', 'location']);
         });
     }
 };

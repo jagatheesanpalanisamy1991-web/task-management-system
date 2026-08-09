@@ -24,11 +24,22 @@ class StoreTaskAssignmentRuleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'task_id' => ['required', 'integer', 'exists:tasks,id','unique:task_assignment_rules,task_id'],
-            'department' => ['required', Rule::in(['finance', 'hr', 'it', 'operation'])],
-            'location' => ['required', 'string', 'max:255'],
-            'minimum_experience' => ['required', 'integer', 'min:0', 'max:50'],
-            'maximum_active_tasks' => ['required', 'integer', 'min:0', 'max:100'],
+            'task_id' => ['required', 'integer', 'exists:tasks,id'],
+            'rule_attribute' => [
+                'required', 
+                'string', 
+                Rule::in(['department', 'minimum_experience', 'location', 'maximum_active_tasks']),
+                Rule::unique('task_assignment_rules', 'rule_attribute')->where('task_id', $this->task_id),
+            ],
+            'rule_operator' => [
+                'required', 
+                'string', 
+                Rule::in(['=', '!=', '>', '<', '>=', '<=', 'IN'])
+            ],
+            'rule_value' => [
+                'required', 
+                'string'
+            ],
         ];
     }
     /**
@@ -37,10 +48,10 @@ class StoreTaskAssignmentRuleRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'task_id.unique' => 'Eligibility rules have already been configured for this task.',
-            'department.in' => 'The selected department is invalid.',
-            'minimum_experience.max' => 'Experience cannot exceed 50 years.',
-            'maximum_active_tasks.min' => 'Maximum active tasks must be at least 1.',
+            'rule_attribute.unique' => ':attribute has already been defined for this task.',
+            'rule_attribute.in' => 'The selected rule attribute is invalid. Allowed values are: department, minimum_experience, location, maximum_active_tasks.',
+            'rule_operator.in' => 'The selected rule operator is invalid. Allowed values are: =, >, <, >=, <=.',
+            'rule_value.required' => 'The rule value is required.',
         ];
     }
 }

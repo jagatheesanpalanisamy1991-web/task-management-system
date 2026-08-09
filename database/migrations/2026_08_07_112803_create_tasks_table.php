@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('tasks', function (Blueprint $table) {
             $table->id();
-            $table->string('title');
+            $table->string('title')->unique();
             $table->text('description')->nullable();
             $table->enum('status', ['todo', 'in_progress', 'done'])->default('todo');
             $table->enum('priority', [
@@ -24,7 +24,14 @@ return new class extends Migration
             $table->foreignId('created_by')
                   ->constrained('users')
                   ->cascadeOnDelete();
+            $table->foreignId('assigned_to')
+                  ->nullable()
+                  ->constrained('users')
+                  ->nullOnDelete();
+            $table->boolean('assignment_pending')->default(true);
             $table->timestamps();
+            $table->index(['assigned_to', 'status'], 'idx_tasks_assignee_status');
+            $table->index('assignment_pending', 'idx_tasks_pending');
         });
     }
 
