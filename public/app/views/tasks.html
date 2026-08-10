@@ -1,0 +1,59 @@
+<div class="container py-4 mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>My Tasks</h2>
+    </div>
+
+    <!-- Error Message Alert -->
+    <div class="alert alert-danger" ng-show="errorMessage">
+        {{ errorMessage }}
+    </div>
+
+    <!-- Loading State -->
+    <div class="text-center my-4" ng-show="loading">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Task List Card -->
+    <div class="card shadow-sm mb-1" ng-hide="loading">
+        <div class="card-body">
+            
+            <!-- Empty State -->
+            <div ng-if="tasks.length === 0" class="text-center text-muted py-3">
+                No tasks found.
+            </div>
+
+            <!-- List of Tasks -->
+            <ul class="list-group list-group-flush" ng-if="tasks.length > 0">
+                <li class="list-group-item d-flex justify-content-between align-items-center py-3" ng-repeat="task in tasks">
+                    <div>
+                        <h5 class="mb-1" ng-style="task.completed ? {'text-decoration': 'line-through', 'color': '#6c757d'} : {}">
+                            {{ task.title }}
+                        </h5>
+                        <p class="mb-0 text-muted small">
+                            <span class="badge bg-secondary me-2">Priority: {{ task.priority || 'medium' }}</span>
+                            <span ng-if="task.due_date">Due: {{ task.due_date }}</span>
+                        </p>
+                    </div>
+                </li>
+            </ul>
+
+        </div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div class="d-flex justify-content-between align-items-center" ng-hide="loading || total === 0">
+        <button class="btn btn-outline-primary btn-sm" ng-click="previousPage()" ng-disabled="currentPage <= 1">
+            &laquo; Previous
+        </button>
+        
+        <span class="text-muted small">
+            Page <strong>{{ currentPage }}</strong> of <strong>{{ lastPage }}</strong> (Total: {{ total }})
+        </span>
+
+        <button class="btn btn-outline-primary btn-sm" ng-click="nextPage()" ng-disabled="currentPage >= lastPage">
+            Next &raquo;
+        </button>
+    </div>
+</div>

@@ -8,7 +8,10 @@ use Illuminate\Http\JsonResponse;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Task;
+use App\Models\User;
 use App\Traits\ApiResponse;
+use Whoops\Run;
+
 
 class TaskController extends Controller
 {
@@ -16,13 +19,11 @@ class TaskController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $tasks = Task::with([
-            'taskRules',
-            'createdBy',
-            'assignee'
-        ])->paginate(10); // Adjust the number of items per page as needed
+            'createdBy'
+        ])->where('created_by',$request->user()->id)->latest()->paginate(10); // Adjust the number of items per page as needed
         return response()->json([
             'message' => 'Tasks fetched successfully.',
             'data' => $tasks,
@@ -33,6 +34,7 @@ class TaskController extends Controller
             'last_page' => $tasks->lastPage(),
         ],
         ], 200);
+        
     }
 
     /**
@@ -84,5 +86,24 @@ class TaskController extends Controller
     {
         $task->delete();
         return response()->json(['message' => 'Task deleted successfully.'], 200);
+    }
+    public function myEligibleTasks(Request $request)
+    {
+        $user = $request->user();
+        $eligibleTasks = Task::latest()->paginate(10);
+        return response()->json([
+            'message' => 'Tasks fetched successfully.',
+            'data' => $eligibleTasks,
+            'pagination' => [
+            'current_page' => $eligibleTasks->currentPage(),
+            'per_page' => $eligibleTasks->perPage(),
+            'total' => $eligibleTasks->total(),
+            'last_page' => $eligibleTasks->lastPage(),
+        ],
+        ], 200);
+        // return response()->json([
+        //     'message' => 'Eligible tasks fetched successfully.',
+        //     'data' => $eligibleTasks,
+        // ], 200);
     }
 }

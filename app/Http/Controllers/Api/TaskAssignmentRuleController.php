@@ -14,21 +14,33 @@ use App\Http\Requests\UpdateTaskAssignmentRuleRequest;
 class TaskAssignmentRuleController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource (filtered by task_id if provided).
      */
-    public function index()
+    public function index(Request $request): JsonResponse
     {
-        dd(TaskAssignmentRule::all());
+        $query = TaskAssignmentRule::query();
+
+        if ($request->has('task_id')) {
+            $query->where('task_id', $request->task_id);
+        }
+
+        $rules = $query->get();
+
+        return response()->json([
+            'message' => 'Task assignment rules retrieved successfully.',
+            'data' => $rules,
+        ], 200);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreTaskAssignmentRuleRequest $request)
+    public function store(StoreTaskAssignmentRuleRequest $request): JsonResponse
     {
         $validatedData = $request->validated();
-        //dd($validatedData);
+        
         $taskAssignmentRule = TaskAssignmentRule::create($validatedData);
+
         return response()->json([
             'message' => 'Task assignment rule created successfully.',
             'data' => $taskAssignmentRule,
@@ -38,24 +50,42 @@ class TaskAssignmentRuleController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(string $id): JsonResponse
     {
-        dd('show');
+        $taskAssignmentRule = TaskAssignmentRule::findOrFail($id);
+
+        return response()->json([
+            'message' => 'Task assignment rule retrieved successfully.',
+            'data' => $taskAssignmentRule,
+        ], 200);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateTaskAssignmentRuleRequest $request, string $id)
+    public function update(UpdateTaskAssignmentRuleRequest $request, string $id): JsonResponse
     {
-        dd('update');
+        $taskAssignmentRule = TaskAssignmentRule::findOrFail($id);
+        
+        $validatedData = $request->validated();
+        $taskAssignmentRule->update($validatedData);
+
+        return response()->json([
+            'message' => 'Task assignment rule updated successfully.',
+            'data' => $taskAssignmentRule,
+        ], 200);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(string $id): JsonResponse
     {
-        dd('destroy');
+        $taskAssignmentRule = TaskAssignmentRule::findOrFail($id);
+        $taskAssignmentRule->delete();
+
+        return response()->json([
+            'message' => 'Task assignment rule deleted successfully.',
+        ], 200);
     }
 }

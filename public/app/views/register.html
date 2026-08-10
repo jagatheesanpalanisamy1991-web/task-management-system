@@ -1,0 +1,37 @@
+<div class="row justify-content-center mt-5">
+  <div class="col-md-4">
+    <div class="card p-4 shadow-sm">
+      <h3 class="text-center mb-3">Register</h3>
+
+      <div ng-if="errorMessage" class="alert alert-danger py-2">
+        {{ errorMessage }}
+      </div>
+
+      <form ng-submit="register()">
+        <div class="mb-3">
+          <label class="form-label">Name</label>
+          <input type="text" class="form-control" ng-model="user.name" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" ng-model="user.email" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-control" ng-model="user.password" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Confirm Password</label>
+          <input type="password" class="form-control" ng-model="user.password_confirmation" required>
+        </div>
+        <button type="submit" class="btn btn-success w-100" ng-disabled="loading">
+          {{ loading ? 'Creating Account...' : 'Register' }}
+        </button>
+      </form>
+
+      <div class="text-center mt-3">
+        <small>Already registered? <a href="#!/login">Login</a></small>
+      </div>
+    </div>
+  </div>
+</div>

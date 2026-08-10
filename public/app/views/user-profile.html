@@ -1,0 +1,40 @@
+<div class="container mt-4" ng-controller="UserProfileController">
+    <h2>User Profile & Rule Attributes</h2>
+
+    <!-- Feedback Alerts -->
+    <div class="alert alert-success" ng-if="successMessage">
+        {{ successMessage }}
+    </div>
+    <div class="alert alert-danger" ng-if="errorMessage">
+        {{ errorMessage }}
+    </div>
+
+    <form ng-submit="updateProfile()" class="card p-4 shadow-sm">
+        
+        <!-- Department Field -->
+        <div class="mb-3">
+            <label for="department" class="form-label">Department</label>
+            <select class="form-select" id="department" ng-model="user.department" required>
+                <option value="" disabled>Select Department</option>
+                <option value="finance">Finance</option>
+                <option value="hr">HR</option>
+                <option value="it">IT</option>
+                <option value="operation">Operation</option>
+            </select>
+        </div>
+
+        <!-- Location Field -->
+        <div class="mb-3">
+            <label for="location" class="form-label">Location</label>
+            <input type="text" class="form-control" id="location" ng-model="user.location" placeholder="e.g. New York">
+        </div>
+
+        <!-- Minimum Experience Field -->
+        <div class="mb-3">
+            <label for="experience" class="form-label">Experience (Years)</label>
+            <input type="number" class="form-control" id="experience" ng-model="user.years_experience" min="0">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Profile & Trigger Evaluation</button>
+    </form>
+</div>

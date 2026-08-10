@@ -37,9 +37,7 @@ class StoreTaskAssignmentRuleRequest extends FormRequest
                 Rule::in(['=', '!=', '>', '<', '>=', '<=', 'IN'])
             ],
             'rule_value' => [
-                'required', 
-                'string'
-            ],
+                'required',             ],
         ];
     }
     /**

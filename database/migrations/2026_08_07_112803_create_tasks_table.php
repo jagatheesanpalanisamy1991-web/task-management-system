@@ -28,6 +28,7 @@ return new class extends Migration
                   ->nullable()
                   ->constrained('users')
                   ->nullOnDelete();
+            $table->date('due_date')->nullable();
             $table->boolean('assignment_pending')->default(true);
             $table->timestamps();
             $table->index(['assigned_to', 'status'], 'idx_tasks_assignee_status');

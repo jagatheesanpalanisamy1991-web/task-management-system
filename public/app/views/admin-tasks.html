@@ -1,0 +1,231 @@
+<div class="container py-4">
+
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Admin Task Management</h2>
+            <p class="text-muted mb-0">Manage system tasks, priority, due dates, and rule-based assignments</p>
+        </div>
+    </div>
+
+    <!-- Error Alert -->
+    <div ng-if="errorMessage" class="alert alert-danger">
+        {{ errorMessage }}
+    </div>
+
+    <!-- Create Task Form (Admin Only) -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Create Task</h5>
+
+            <form ng-submit="addTask()" class="row g-2">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" ng-model="newTask.title" placeholder="Enter task title" required>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" class="form-control" ng-model="newTask.due_date" required>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" ng-model="newTask.priority" required>
+                        <option value="" disabled selected>Select Priority</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Add Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div ng-if="loading" class="text-center py-4">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="text-muted mt-2">Loading tasks...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div ng-if="!loading && tasks.length === 0" class="alert alert-info">
+        No tasks found.
+    </div>
+
+    <!-- Task List -->
+    <div ng-if="!loading && tasks.length > 0" class="card shadow-sm">
+        <div class="card-header">
+            <strong>All System Tasks</strong>
+        </div>
+
+        <div class="list-group list-group-flush">
+            <div class="list-group-item" ng-repeat="task in tasks track by task.id">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="flex-grow-1">
+                        <!-- Normal Title & Details View -->
+                        <div ng-if="!task.isEditing">
+                            <span ng-class="{'text-decoration-line-through text-muted': task.completed}" class="fw-bold fs-6">
+                                {{ task.title }}
+                            </span>
+                            <div class="text-muted small">
+                                <span>Due: {{ task.due_date | date:'yyyy-MM-dd' }}</span> | 
+                                <span class="badge bg-secondary text-uppercase">{{ task.priority || 'medium' }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Edit Mode Inputs -->
+                        <div ng-if="task.isEditing" class="row g-2 mt-1">
+                            <div class="col-md-5">
+                                <input type="text" class="form-control form-control-sm" ng-model="task.editTitle" placeholder="Title">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="date" class="form-control form-control-sm" ng-model="task.editDueDate">
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select form-select-sm" ng-model="task.editPriority">
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="ms-3 d-flex align-items-center gap-1">
+                        <!-- Assign Rules Button -->
+                        <button class="btn btn-sm btn-outline-info" ng-click="openAssignRules(task)">
+                            Assign Rules
+                        </button>
+
+                        <!-- Status Toggle Button -->
+                        <button class="btn btn-sm btn-outline-success" ng-click="toggleTask(task)">
+                            {{ task.completed ? 'Completed' : 'Pending' }}
+                        </button>
+
+                        <!-- Edit Button -->
+                        <button ng-if="!task.isEditing" class="btn btn-sm btn-outline-primary" ng-click="startEdit(task)">
+                            Edit
+                        </button>
+
+                        <!-- Save Edit Button -->
+                        <button ng-if="task.isEditing" class="btn btn-sm btn-success" ng-click="saveEdit(task)">
+                            Save
+                        </button>
+
+                        <!-- Delete Button -->
+                        <button class="btn btn-sm btn-outline-danger" ng-click="deleteTask(task.id, $index)">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Rules Management Panel (Context-Aware UX) -->
+                <div ng-if="task.showRulesPanel" class="mt-3 p-3 border rounded bg-light">
+                    <h6 class="fw-bold text-primary mb-2">Assign Rules for: {{ task.title }}</h6>
+                    
+                    <!-- Add Rule Subform -->
+                    <div class="row g-2 mb-3">
+                        <!-- 1. Attribute Selection -->
+                        <div class="col-md-3">
+                            <select class="form-select form-select-sm" ng-model="task.tempRule.rule_attribute" ng-change="onAttributeChange(task)">
+                                <option value="" disabled selected>Select Attribute</option>
+                                <option value="department">Department</option>
+                                <option value="minimum_experience">Minimum Experience</option>
+                                <option value="location">Location</option>
+                            </select>
+                        </div>
+
+                        <!-- 2. Operator Selection -->
+                        <div class="col-md-3">
+                            <select class="form-select form-select-sm" ng-model="task.tempRule.rule_operator">
+                                <option value="=" ng-if="task.tempRule.rule_attribute === 'department' || task.tempRule.rule_attribute === 'location' || task.tempRule.rule_attribute === 'minimum_experience'">Equals (=)</option>
+                                <option value=">=" ng-if="task.tempRule.rule_attribute === 'minimum_experience'">Greater or Equal (&gt;=)</option>
+                                <option value=">" ng-if="task.tempRule.rule_attribute === 'minimum_experience'">Greater Than (&gt;)</option>
+                                <option value="<" ng-if="task.tempRule.rule_attribute === 'minimum_experience'">Less Than (&lt;)</option>
+                                <option value="!=" ng-if="task.tempRule.rule_attribute === 'location' || task.tempRule.rule_attribute === 'minimum_experience'">Not Equals (!=)</option>
+                            </select>
+                        </div>
+
+                        <!-- 3. Dynamic Value Input (Adapts based on attribute) -->
+                        <div class="col-md-4" ng-switch="task.tempRule.rule_attribute">
+                            <!-- Department Options -->
+                            <select ng-switch-when="department" class="form-select form-select-sm" ng-model="task.tempRule.rule_value">
+                                <option value="" disabled selected>Select Department</option>
+                                <option value="finance">Finance</option>
+                                <option value="hr">HR</option>
+                                <option value="it">IT</option>
+                                <option value="operation">Operation</option>
+                            </select>
+
+                            <!-- Numeric Input for Experience -->
+                            <input ng-switch-when="minimum_experience" type="number" class="form-control form-control-sm" ng-model="task.tempRule.rule_value" placeholder="Enter years (e.g. 3)" min="0" max="50">
+
+                            <!-- Location Options -->
+                            <select ng-switch-when="location" class="form-select form-select-sm" ng-model="task.tempRule.rule_value">
+                                <option value="" disabled selected>Select Location</option>
+                                <option value="Chennai">Chennai</option>
+                                <option value="Coimbatore">Coimbatore</option>
+                                <option value="Bangalore">Bangalore</option>
+                                <option value="Hyderabad">Hyderabad</option>
+                            </select>
+
+                            <!-- Default Fallback Input -->
+                            <input ng-switch-default type="text" class="form-control form-control-sm" ng-model="task.tempRule.rule_value" placeholder="Select attribute first" disabled>
+                        </div>
+
+                        <!-- 4. Add Rule Button -->
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-sm btn-success w-100" ng-click="addRuleToList(task)">Add Rule</button>
+                        </div>
+                    </div>
+
+                    <!-- Rules List Table -->
+                    <div ng-if="task.rules && task.rules.length > 0">
+                        <table class="table table-sm table-bordered bg-white mb-2">
+                            <thead>
+                                <tr>
+                                    <th>Task ID</th>
+                                    <th>Attribute</th>
+                                    <th>Operator</th>
+                                    <th>Value</th>
+                                    <th style="width: 100px;">Status / Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="rule in task.rules track by $index">
+                                    <td>{{ task.id }}</td>
+                                    <td><code>{{ rule.rule_attribute }}</code></td>
+                                    <td>{{ rule.rule_operator }}</td>
+                                    <td>{{ rule.rule_value }}</td>
+                                    <td class="text-center">
+                                        <span ng-if="rule.is_existing" class="badge bg-success me-1">Saved</span>
+                                        <span ng-if="rule.is_new" class="badge bg-warning text-dark me-1">New</span>
+                                        <button type="button" class="btn btn-sm btn-danger py-0 px-1" ng-click="removeRule(task, $index, rule)" title="Remove Rule">×</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-sm btn-primary" ng-click="saveRules(task)">Save New Rules</button>
+                    </div>
+                    <div ng-if="!task.rules || task.rules.length === 0" class="text-muted small italic">
+                        No rules added yet for this task.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Pagination Footer -->
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <div class="text-muted">
+                Page {{ currentPage }} of {{ lastPage }}
+                <span class="ms-2">({{ total }} tasks)</span>
+            </div>
+            <div>
+                <button type="button" class="btn btn-outline-primary me-2 btn-sm" ng-click="previousPage()" ng-disabled="currentPage <= 1">Previous</button>
+                <button type="button" class="btn btn-primary btn-sm" ng-click="nextPage()" ng-disabled="currentPage >= lastPage">Next</button>
+            </div>
+        </div>
+    </div>
+
+</div>

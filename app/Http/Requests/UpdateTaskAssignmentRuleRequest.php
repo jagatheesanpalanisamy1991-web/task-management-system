@@ -38,7 +38,6 @@ class UpdateTaskAssignmentRuleRequest extends FormRequest
             ],
             'rule_value' => [
                 'required', 
-                'string'
             ],
         ];
     }
