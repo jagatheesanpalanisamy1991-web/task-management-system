@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use App\Jobs\EvaluateUserTaskRules;
+use Illuminate\Support\Facades\Log;
 
 class UserObserver
 {
@@ -23,7 +24,7 @@ class UserObserver
     {
         $relevantAttributes = ['department', 'years_experience', 'location'];
         if ($user->wasChanged($relevantAttributes)) {
-            
+            Log::info('User observer calling..');
             DB::afterCommit(function () use ($user) {
                 EvaluateUserTaskRules::dispatch($user);
             });

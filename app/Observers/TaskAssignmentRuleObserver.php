@@ -4,6 +4,7 @@ namespace App\Observers;
 use App\Models\TaskAssignmentRule;
 use App\Jobs\AssignEligibleUsersJob;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TaskAssignmentRuleObserver
 {
@@ -24,6 +25,7 @@ class TaskAssignmentRuleObserver
 
     protected function evaluateTask(TaskAssignmentRule $taskRule): void
     {
+        Log::info('Observer Called...');
         if ($taskRule) {
             DB::afterCommit(function () use ($taskRule) {
                 AssignEligibleUsersJob::dispatch($taskRule->task);

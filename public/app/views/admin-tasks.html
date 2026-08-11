@@ -130,19 +130,20 @@
                             <select class="form-select form-select-sm" ng-model="task.tempRule.rule_attribute" ng-change="onAttributeChange(task)">
                                 <option value="" disabled selected>Select Attribute</option>
                                 <option value="department">Department</option>
-                                <option value="minimum_experience">Minimum Experience</option>
+                                <option value="minimum_experience">Years Experience</option>
                                 <option value="location">Location</option>
+                                <option value="maximum_active_tasks"> Active Tasks</option>
                             </select>
                         </div>
 
                         <!-- 2. Operator Selection -->
                         <div class="col-md-3">
                             <select class="form-select form-select-sm" ng-model="task.tempRule.rule_operator">
-                                <option value="=" ng-if="task.tempRule.rule_attribute === 'department' || task.tempRule.rule_attribute === 'location' || task.tempRule.rule_attribute === 'minimum_experience'">Equals (=)</option>
-                                <option value=">=" ng-if="task.tempRule.rule_attribute === 'minimum_experience'">Greater or Equal (&gt;=)</option>
-                                <option value=">" ng-if="task.tempRule.rule_attribute === 'minimum_experience'">Greater Than (&gt;)</option>
-                                <option value="<" ng-if="task.tempRule.rule_attribute === 'minimum_experience'">Less Than (&lt;)</option>
-                                <option value="!=" ng-if="task.tempRule.rule_attribute === 'location' || task.tempRule.rule_attribute === 'minimum_experience'">Not Equals (!=)</option>
+                                <option value="=" ng-if="task.tempRule.rule_attribute === 'department' || task.tempRule.rule_attribute === 'location' || task.tempRule.rule_attribute === 'minimum_experience' || task.tempRule.rule_attribute ==='maximum_active_tasks'">Equals (=)</option>
+                                <option value=">=" ng-if="task.tempRule.rule_attribute === 'minimum_experience' || task.tempRule.rule_attribute ==='maximum_active_tasks' ">Greater or Equal (&gt;=)</option>
+                                <option value=">" ng-if="task.tempRule.rule_attribute === 'minimum_experience' || task.tempRule.rule_attribute ==='maximum_active_tasks'">Greater Than (&gt;)</option>
+                                <option value="<" ng-if="task.tempRule.rule_attribute === 'minimum_experience'|| task.tempRule.rule_attribute ==='maximum_active_tasks' ">Less Than (&lt;)</option>
+                                <option value="!=" ng-if="task.tempRule.rule_attribute === 'location' || task.tempRule.rule_attribute === 'minimum_experience' || task.tempRule.rule_attribute ==='maximum_active_tasks'">Not Equals (!=)</option>
                             </select>
                         </div>
 
@@ -168,6 +169,15 @@
                                 <option value="Bangalore">Bangalore</option>
                                 <option value="Hyderabad">Hyderabad</option>
                             </select>
+
+                            <!-- Maximum Active Tasks -->
+                            <input
+                                ng-switch-when="maximum_active_tasks"
+                                type="number"
+                                class="form-control form-control-sm"
+                                ng-model="task.tempRule.rule_value"
+                                placeholder="Enter active tasks"
+                                min="0">
 
                             <!-- Default Fallback Input -->
                             <input ng-switch-default type="text" class="form-control form-control-sm" ng-model="task.tempRule.rule_value" placeholder="Select attribute first" disabled>
