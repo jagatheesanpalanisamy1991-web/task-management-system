@@ -183,7 +183,7 @@ angular.module('taskApp')
                 .then(function (response) {
 
                     var result = response.data;
-                    console.log(result);
+                    //console.log(result);
                     $scope.tasks = result.data.data || [];
 
                     $scope.currentPage =
@@ -283,8 +283,8 @@ angular.module('taskApp')
                 .then(function (response) {
 
                     var result = response.data;
-                    console.log('API Response:',response);
-                    console.log(result.pagination);
+                    // console.log('API Response:',response);
+                    // console.log(result.pagination);
                     $scope.tasks = result.data.data || [];
                     
                     $scope.currentPage =

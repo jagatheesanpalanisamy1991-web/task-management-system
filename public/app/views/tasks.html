@@ -1,6 +1,13 @@
-<div class="container py-4 mt-4">
+<div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>My Tasks</h2>
+            <div>
+                <h2 class="mb-1">My Eligible Tasks</h2>
+                 <p class="text-muted mb-0"> Tasks assigned to you </p> 
+            </div> 
+            <div ng-if="total > 0">
+                 <span class="badge bg-primary px-3 py-2"> {{ total }} Tasks </span> 
+            </div> 
+        </div>
     </div>
 
     <!-- Error Message Alert -->
@@ -25,10 +32,10 @@
             </div>
 
             <!-- List of Tasks -->
-            <ul class="list-group list-group-flush" ng-if="tasks.length > 0">
-                <li class="list-group-item d-flex justify-content-between align-items-center py-3" ng-repeat="task in tasks">
+            <!-- <ul class="list-group list-group-flush" ng-if="tasks.length > 0">
+                <li class="list-group-item d-flex justify-content-between align-items-center py-2" ng-repeat="task in tasks">
                     <div>
-                        <h5 class="mb-1" ng-style="task.completed ? {'text-decoration': 'line-through', 'color': '#6c757d'} : {}">
+                        <h5 ng-style="task.completed ? {'text-decoration': 'line-through', 'color': '#6c757d'} : {}">
                             {{ task.title }}
                         </h5>
                         <p class="mb-0 text-muted small">
@@ -37,23 +44,56 @@
                         </p>
                     </div>
                 </li>
-            </ul>
+            </ul> -->
+            <div class="table-responsive" ng-if="tasks.length > 0" >
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead>
+                        <th>#</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Created At</th>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="task in tasks">
+                            <td>{{task.id}}</td>
+                            <td class="text-muted">{{task.title | limitTo:40}}</td>
+                            <td>{{task.description | limitTo:50}}</td>
+                            <td><span class="badge" ng-class="{
+                                    'bg-danger':task.status==='todo',
+                                    'bg-warning':task.status==='inprogress',
+                                    'bg-success':task.status==='completed'}">
+                                {{task.status}}
+                                </span></td>
+                            <td> <span class="badge" 
+                                ng-class="{
+                                    'bg-danger':task.priority==='high',
+                                    'bg-warning':task.priority==='medium',
+                                    'bg-success':task.priority==='low'}"
+                                >{{task.priority}}</span> </td>
+                            <td class="text-muted small"><span ng-if="task.created_at">
+                                    {{ task.created_at | date:'dd MMM yyyy, hh:mm a' }}
+                                </span>
 
+                                <span ng-if="!task.created_at">
+                                    —
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <!-- Pagination Controls -->
-    <div class="d-flex justify-content-between align-items-center" ng-hide="loading || total === 0">
-        <button class="btn btn-outline-primary btn-sm" ng-click="previousPage()" ng-disabled="currentPage <= 1">
-            &laquo; Previous
-        </button>
-        
-        <span class="text-muted small">
-            Page <strong>{{ currentPage }}</strong> of <strong>{{ lastPage }}</strong> (Total: {{ total }})
-        </span>
-
-        <button class="btn btn-outline-primary btn-sm" ng-click="nextPage()" ng-disabled="currentPage >= lastPage">
-            Next &raquo;
-        </button>
+    <div class="d-flex justify-content-between align-items-center mt-3" ng-hide="loading || total === 0" > 
+        <div class="text-muted small"> Showing page <strong>{{ currentPage }}</strong> of <strong>{{ lastPage }}</strong> <span class="ms-2"> ({{ total }} tasks) </span>
+         </div> 
+        <div class="d-flex gap-2"> 
+            <button class="btn btn-outline-primary btn-sm" ng-click="previousPage()" ng-disabled="currentPage <= 1" > &laquo; Previous </button> 
+            <button class="btn btn-outline-primary btn-sm" ng-click="nextPage()" ng-disabled="currentPage >= lastPage" > Next &raquo; </button> 
+        </div>
     </div>
 </div>

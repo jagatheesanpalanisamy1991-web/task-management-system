@@ -23,7 +23,7 @@ class TaskController extends Controller
     {
         $tasks = Task::with([
             'createdBy'
-        ])->where('created_by',$request->user()->id)->latest()->paginate(10); // Adjust the number of items per page as needed
+        ])->where('created_by',$request->user()->id)->latest()->paginate(10);
         return response()->json([
             'message' => 'Tasks fetched successfully.',
             'data' => $tasks,
@@ -51,7 +51,6 @@ class TaskController extends Controller
             'message' => 'Task created successfully.',
             'data' => $task,
         ], 201);
-        //return $this->successResponse($task, 'Task created successfully.', 201);
     }
 
     /**
@@ -90,9 +89,12 @@ class TaskController extends Controller
     public function myEligibleTasks(Request $request)
     {
         $user = $request->user();
-        $eligibleTasks = Task::latest()->paginate(10);
+        //$eligibleTasks = Task::latest()->paginate(10);
+        $eligibleTasks = Task::query()
+            ->where('assigned_to',$user->id)
+            ->paginate(10);
         return response()->json([
-            'message' => 'Tasks fetched successfully.',
+            'message' => 'Eligible fetched successfully.',
             'data' => $eligibleTasks,
             'pagination' => [
             'current_page' => $eligibleTasks->currentPage(),
@@ -101,9 +103,5 @@ class TaskController extends Controller
             'last_page' => $eligibleTasks->lastPage(),
         ],
         ], 200);
-        // return response()->json([
-        //     'message' => 'Eligible tasks fetched successfully.',
-        //     'data' => $eligibleTasks,
-        // ], 200);
     }
 }
