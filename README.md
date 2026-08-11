@@ -2,112 +2,122 @@
 
 ## Overview
 
-This project was built as part of a Senior Software Development Engineer technical assignment for Indus Action, targeting the technology stack used on the Odisha RTE platform.
+This project is being developed as part of a Senior Software Development Engineer technical assignment.
 
-It's a Task Management System where tasks are never manually assigned. Instead, an admin defines eligibility rules on a task (department, experience, location, workload), and a background rule engine automatically finds and assigns the best-matching user.
+The application is a Task Management System that automatically assigns tasks to eligible users based on configurable business rules.
 
 ## Technology Stack
 
-- Laravel 11 (PHP 8.3)
+- Laravel 11
+- PHP 8.3
 - AngularJS
 - MySQL 8
 - Redis
-- Docker & Docker Compose
+- Docker
+- Docker Compose
 
 ## Project Status
 
-**Completed:**
+Initial setup in progress
 
-- Docker infrastructure — PHP-FPM, Nginx, MySQL, Redis, a Supervisor-managed queue worker, and a scheduler, all as separate containers
-- Laravel 11 installed and configured, database and Redis connections working
-- Authentication — registration, login, logout, profile — via Laravel Sanctum
-- Role-based authorization middleware (admin / manager / user)
-- User profile attributes (department, years of experience, location, active task count)
-- Task CRUD (create, view, update, delete)
-- Assignment rules, managed separately from tasks — a task can have multiple rule conditions (department, minimum experience, location, maximum active tasks)
-- The rule engine itself — matches eligible users against a task's rules, with a fewest-active-tasks tie-break, and a deterministic fallback if that ties too
-- Background processing — rule evaluation runs asynchronously on a dedicated queue, with retry and backoff on failure
-- Automatic re-evaluation when an admin edits a task's rules, and when a user's profile changes in a way that could affect eligibility
-- A scheduled retry job for tasks that had no eligible user, with backoff so it doesn't hammer permanently-stuck tasks forever
-- AngularJS frontend — login, my tasks, all tasks (admin), create task, edit task
-- Rule engine tested manually against 10,000+ seeded records
+## Docker Infrastructure
 
-**Still in progress / not yet fully verified:**
+This project environment is configured with the Docker and Docker Composer Insfrastructe,
+The following services are included,
+ PHP 8.3 with PHP-FPM for running the Laravel application
+ Nginx as the web server
+ MySQL 8 for database storage
+ Redis for caching and queue processing
+ Queue worker for handling background jobs
 
-- Redis caching on the `/my-eligible-tasks` endpoint
-- Automated test suite (some tests written, not all passing yet)
-- API documentation
-- Final README sections (architecture write-up, ER diagram, assumptions)
+## Project Status
 
-## Running the Project
+Completed.
 
-Start the containers:
-```bash
-docker compose up -d
-```
+Initial Project setup,
+Git Repository configuration,
+Docker Infrastructure setup,
+PHP Docker Image configuration,
+Nginx Configuration,
+Mysql and Redis service configuration,
+Docker containers successfully started.
+Laravel 11 Installation completed
+Configured database and Redis connection
+Laravel environment configuration completed
+- User registration and login
+- Laravel Sanctum authentication
+- Logout and profile API
+- Role-based middleware
+- Admin user seeder
+- User profile attributes
+- Task migration
+- Task assignment rules migration
+- Task CRUD
+- Task assignment rules API
+- Dynamic eligibility engine
+- Background queue processing
+- Assignment result handling
+- Angular JS Frontend
 
-Check what's running:
-```bash
-docker ps
-```
+Next Steps:
 
-Run migrations and seed demo data:
-```bash
-docker compose exec app php artisan migrate:fresh --seed
-```
+- Testing
 
-Stop everything:
-```bash
-docker compose down
-```
+## Docker Infrastructure
+
+The project uses Docker Compose with the following services:
+
+- PHP 8.3 / PHP-FPM
+- Nginx
+- MySQL 8
+- Redis
+- Queue worker
 
 ## Authentication
 
-Laravel Sanctum handles API authentication (token-based, not session cookies).
+Laravel Sanctum is used for API authentication.
 
-```
+Available authentication APIs:
+
 POST /api/register
+
 POST /api/login
+
 POST /api/logout
-GET  /api/profile
-```
+
+GET /api/profile
 
 ## Authorization
 
-Role-based middleware restricts admin/manager-only actions. Three roles: `admin`, `manager`, `user`.
+Role-based middleware is implemented for restricting admin-only operations.
+
+Current roles:
+
+- admin
+- manager
+- user
+
+Example:
 
 ```php
-Route::middleware(['auth:sanctum', 'role:admin,manager'])->group(function () {
-    // admin/manager-only routes
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    // Admin-only routes
 });
-```
 
-## Task Management
+## Runing the Project
 
-```
-POST   /api/tasks
-GET    /api/tasks
-GET    /api/tasks/{id}
-PUT    /api/tasks/{id}
-DELETE /api/tasks/{id}
-```
+Start Docker containers:
 
-Tasks and their eligibility rules are managed separately — creating or editing a task doesn't touch its rules, and vice versa:
+docker compose up -d 
 
-```
-POST   /api/task-assignment-rules
-PUT    /api/task-assignment-rules/{taskAssignmentRule}
-DELETE /api/task-assignment-rules/{taskAssignmentRule}
-```
+Check the running containers
 
-## Assignment Engine
+docker ps
 
-```
-GET  /api/my-eligible-tasks
-```
+Stop the Docker containers
 
-Tasks are assigned automatically, in the background, whenever a rule is added or changed, or when a user's profile changes in a way relevant to some pending task's rules. There's no manual "assign this task to this user" endpoint anywhere in the system, by design.
+docker composer down
 
-## License
+## licence
 
-Built for technical evaluation purposes.
+This project mainly created for technical evolution process

@@ -47,7 +47,11 @@ class RuleEngineService
     }
     public function evaluateUser(User $user): void
     {
-        Task::with('taskRules')->chunkById(500, function ($tasks) use ($user) {
+        Log::info('Evaluate User method running..');
+        Task::query()
+        ->where('assignment_pending',true)
+        ->with('taskRules')
+        ->chunkById(500, function ($tasks) use ($user) {
             foreach ($tasks as $task) {
                 $conditions = $task->taskRules;
 
@@ -58,57 +62,102 @@ class RuleEngineService
                 $matchesAllRules = true;
 
                 foreach ($conditions as $rule) {
-                    $column = self::ATTRIBUTE_COLUMN_MAP[$rule->rule_attribute] ?? null;
-
-                    if (! $column) {
+                    if (!$this->userMatchesRule($user, $rule)) {
                         $matchesAllRules = false;
                         break;
                     }
 
-                    $userValue = $user->{$column} ?? null;
+                    // $column = self::ATTRIBUTE_COLUMN_MAP[$rule->rule_attribute] ?? null;
 
-                    if ($userValue === null) {
-                        $matchesAllRules = false;
-                        break;
-                    }
+                    // if (! $column) {
+                    //     $matchesAllRules = false;
+                    //     break;
+                    // }
 
-                    $ruleValue = in_array($rule->rule_attribute, self::NUMERIC_ATTRIBUTES, true)
-                        ? (int) $rule->rule_value
-                        : $rule->rule_value;
+                    // $userValue = $user->{$column} ?? null;
 
-                    // Evaluate condition using the rule operator
-                    $conditionMet = match ($rule->rule_operator) {
-                        '=' => strcasecmp(trim((string) $userValue), trim((string) $ruleValue)) === 0,
-                        '!=' => strcasecmp(trim((string) $userValue), trim((string) $ruleValue)) !== 0,
-                        '>=' => (float) $userValue >= (float) $ruleValue,
-                        '<=' => (float) $userValue <= (float) $ruleValue,
-                        '>' => (float) $userValue > (float) $ruleValue,
-                        '<' => (float) $userValue < (float) $ruleValue,
-                        default => false,
-                    };
+                    // if ($userValue === null) {
+                    //     $matchesAllRules = false;
+                    //     break;
+                    // }
 
-                    if (! $conditionMet) {
-                        $matchesAllRules = false;
-                        break;
-                    }
+                    // $ruleValue = in_array($rule->rule_attribute, self::NUMERIC_ATTRIBUTES, true)
+                    //     ? (int) $rule->rule_value
+                    //     : $rule->rule_value;
+
+                    // // Evaluate condition using the rule operator
+                    // $conditionMet = match ($rule->rule_operator) {
+                    //     '=' => strcasecmp(trim((string) $userValue), trim((string) $ruleValue)) === 0,
+                    //     '!=' => strcasecmp(trim((string) $userValue), trim((string) $ruleValue)) !== 0,
+                    //     '>=' => (float) $userValue >= (float) $ruleValue,
+                    //     '<=' => (float) $userValue <= (float) $ruleValue,
+                    //     '>' => (float) $userValue > (float) $ruleValue,
+                    //     '<' => (float) $userValue < (float) $ruleValue,
+                    //     default => false,
+                    // };
+
+                    // if (! $conditionMet) {
+                    //     $matchesAllRules = false;
+                    //     break;
+                    // }
                 }
-
-                // Synchronize the task's `assign_to` column safely
-                if ($matchesAllRules) {
-                    Log::info("Rules matched user {$user->id}");
-                    // Assign to this user ONLY IF the task is currently unassigned or already theirs
-                    if (is_null($task->assigned_to) || $task->assigned_to === $user->id) {
-                        if ($task->assigned_to !== $user->id) {
-                            $task->update(['assigned_to' => $user->id]);
-                        }
-                    }
-                } else {
-                    // If they no longer match, and they were the exact user assigned, reset it to null
-                    if ($task->assigned_to === $user->id) {
-                        $task->update(['assigned_to' => null]);
-                    }
+                    if (!$matchesAllRules) {
+                    continue;
                 }
+                    $task->update([
+                        'assigned_to' => $user->id,
+                        'assignment_pending' => false,
+                        'status' => 'todo'
+                    ]);
+                Log::info("Task {$task->id} assigned to user {$user->id} after profile update.");
+
             }
         });
+    }
+
+    private function userMatchesRule(User $user, TaskAssignmentRule $rule): bool
+    {
+        $column = self::ATTRIBUTE_COLUMN_MAP[$rule->rule_attribute] ?? null;
+
+        if (!$column) {
+            return false;
+        }
+
+        $userValue = $user->{$column} ?? null;
+
+        if ($userValue === null) {
+            return false;
+        }
+
+        $ruleValue = in_array(
+            $rule->rule_attribute,
+            self::NUMERIC_ATTRIBUTES,
+            true
+        )
+            ? (int) $rule->rule_value
+            : $rule->rule_value;
+
+        return match ($rule->rule_operator) {
+
+            '=' => strcasecmp(
+                trim((string) $userValue),
+                trim((string) $ruleValue)
+            ) === 0,
+
+            '!=' => strcasecmp(
+                trim((string) $userValue),
+                trim((string) $ruleValue)
+            ) !== 0,
+
+            '>=' => (float) $userValue >= (float) $ruleValue,
+
+            '<=' => (float) $userValue <= (float) $ruleValue,
+
+            '>' => (float) $userValue > (float) $ruleValue,
+
+            '<' => (float) $userValue < (float) $ruleValue,
+
+            default => false,
+        };
     }
 }
