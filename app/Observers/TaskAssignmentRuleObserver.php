@@ -9,20 +9,20 @@ class TaskAssignmentRuleObserver
 {
     public function created(TaskAssignmentRule $taskRule): void
     {
-        $this->recalculate($taskRule);
+        $this->evaluateTask($taskRule);
     }
 
     public function updated(TaskAssignmentRule $taskRule): void
     {
-        $this->recalculate($taskRule);
+        $this->evaluateTask($taskRule);
     }
 
     public function deleted(TaskAssignmentRule $taskRule): void
     {
-        $this->recalculate($taskRule);
+        $this->evaluateTask($taskRule);
     }
 
-    protected function recalculate(TaskAssignmentRule $taskRule): void
+    protected function evaluateTask(TaskAssignmentRule $taskRule): void
     {
         if ($taskRule) {
             DB::afterCommit(function () use ($taskRule) {

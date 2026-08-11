@@ -160,4 +160,35 @@ class RuleEngineService
             default => false,
         };
     }
+    public function evaluateTask(Task $task): void
+    {
+        Log::info($task);
+        $task->load('taskRules');
+        if($task->taskRules->isEmpty())
+        {
+            return;
+        }
+        // Task already has an assignee.
+        if(!$task->assignment_pending && $task->assigned_to)
+        {
+            $currentUser = User::find($task->assigned_to);
+            if ($currentUser && $this->userMatchesRule($currentUser, $task->taskRules)) {
+                
+            }
+        }
+        $user = $this->findEligibleUser($task);
+        if(!$user)
+        {
+            Log::info("No eligible user found for task {$task->id}");
+            return;
+        }
+        $task->update([
+            'assigned_to' => $user->id,
+            'assignment_pending' => false,
+            'status' => 'todo',
+        ]);
+
+        Log::info("Task {$task->id} Assigned to {$user->id}");
+
+    }
 }

@@ -30,6 +30,6 @@ class AssignEligibleUsersJob implements ShouldQueue
      */
     public function handle(RuleEngineService $ruleEngine): void
     {
-        $ruleEngine->findEligibleUser($this->task);
+        $ruleEngine->evaluateTask($this->task);
     }
 }
