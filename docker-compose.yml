@@ -6,6 +6,7 @@ services:
     container_name: task-management-system-app
     ports:
     - "8081:8080"
+    - "8082:8082"
     working_dir: /var/www/html
     volumes:
       - ./:/var/www/html
