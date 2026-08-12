@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: .docker/php/Dockerfile
     container_name: task-management-system-app
+    ports:
+    - "8081:8080"
     working_dir: /var/www/html
     volumes:
       - ./:/var/www/html

@@ -183,7 +183,7 @@ angular.module('taskApp')
                 .then(function (response) {
 
                     var result = response.data;
-                    //console.log(result);
+                    console.log(result.data);
                     $scope.tasks = result.data.data || [];
 
                     $scope.currentPage =
@@ -488,7 +488,73 @@ angular.module('taskApp')
                 });
         };
 
+        $scope.selectedTaskIds = [];
+        $scope.toggleTaskSelection = function (task) {
+            var idx = $scope.selectedTaskIds.indexOf(task.id);
 
+            if (idx > -1) {
+                $scope.selectedTaskIds.splice(idx, 1);
+            } else {
+                $scope.selectedTaskIds.push(task.id);
+            }
+        };
+
+        $scope.isTaskSelected = function (task) {
+            return $scope.selectedTaskIds.indexOf(task.id) > -1;
+        };
+
+        $scope.viewEligibleUsers = function (task) {
+            task.showEligiblePanel = !task.showEligiblePanel;
+
+            if (task.showEligiblePanel) {
+                task.loadingEligible = true;
+                task.eligibleUsers = [];
+
+                TaskService.getEligibleUsers(task.id)
+                    .then(function (response) {
+                        var result = response.data;
+                        task.eligibleUsers = result.data || [];
+                    })
+                    .catch(function (error) {
+                        console.error('Failed to load eligible users', error);
+                        $scope.errorMessage = 'Unable to load eligible users.';
+                    })
+                    .finally(function () {
+                        task.loadingEligible = false;
+                    });
+            }
+        };
+
+        $scope.recomputeEligibility = function () {
+
+            if ($scope.selectedTaskIds.length === 0) {
+                if (!confirm('No tasks selected. Recompute eligibility for ALL open tasks?')) {
+                    return;
+                }
+            }
+
+            $scope.recomputing = true;
+            $scope.errorMessage = '';
+            $scope.recomputeResult = null;
+
+            TaskService.recomputeEligibility($scope.selectedTaskIds)
+                .then(function (response) {
+                    $scope.recomputeResult = response.data;
+                    $scope.selectedTaskIds = [];
+                    $scope.loadTasks($scope.currentPage);
+                })
+                .catch(function (error) {
+                    console.error('Recompute eligibility error:', error);
+                    $scope.errorMessage =
+                        error.data && error.data.message
+                            ? error.data.message
+                            : 'Unable to recompute eligibility.';
+                })
+                .finally(function () {
+                    $scope.recomputing = false;
+                });
+        };
+        
         // --- Assignment Rules Logic ---
 
         $scope.openAssignRules = function (task) {

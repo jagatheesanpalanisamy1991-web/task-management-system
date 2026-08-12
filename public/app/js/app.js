@@ -145,5 +145,11 @@ angular.module('taskApp', ['ngRoute'])
                 }
             }
         );
+        $rootScope.$on(
+            'task-list.updated',
+            function(){
+                console.log('Tasklist updated..')
+            }
+        );
     }
 ]);

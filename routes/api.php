@@ -25,9 +25,11 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::put('/tasks/{id}',[TaskController::class,'update']);
     Route::get('/tasks/{id}',[TaskController::class,'show']);
     Route::delete('/tasks/{id}',[TaskController::class,'destroy']);
-    
+    Route::get('/tasks/{id}/eligible-users', [TaskController::class, 'eligibleUsers']);
+    Route::post('/tasks/recompute-eligibility', [TaskController::class, 'recomputeEligibility']);
     Route::apiResource('taskAssignmentRules', TaskAssignmentRuleController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
-});
+    
+    });
 Route::middleware(['auth:sanctum', 'role:user'])->group(function () {
     Route::get('/my-eligible-tasks', [TaskController::class, 'myEligibleTasks']);
     Route::put('/user/profile', [UserProfileController::class, 'update']);

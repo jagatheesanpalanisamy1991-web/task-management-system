@@ -51,6 +51,23 @@
         No tasks found.
     </div>
 
+    <!-- Eligibility Toolbar -->
+    <div class="card shadow-sm mb-3" ng-if="!loading && tasks.length > 0">
+        <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <button class="btn btn-primary" ng-click="recomputeEligibility()" ng-disabled="recomputing">
+                {{ recomputing ? 'Recomputing...' : 'Recompute Eligibility (' + selectedTaskIds.length + ' selected)' }}
+            </button>
+
+            <div ng-if="recomputeResult" class="text-success small mb-0">
+                Scope: {{ recomputeResult.scope }} |
+                Processed: {{ recomputeResult.tasks_processed }}
+                <span ng-if="recomputeResult.tasks_failed.length">
+                    | Failed: {{ recomputeResult.tasks_failed.join(', ') }}
+                </span>
+            </div>
+        </div>
+    </div>
+
     <!-- Task List -->
     <div ng-if="!loading && tasks.length > 0" class="card shadow-sm">
         <div class="card-header">
@@ -61,13 +78,23 @@
             <div class="list-group-item" ng-repeat="task in tasks track by task.id">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="flex-grow-1">
+
+                        <!-- Selection Checkbox -->
+                        <div class="form-check form-check-inline mb-1">
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   ng-checked="isTaskSelected(task)"
+                                   ng-click="toggleTaskSelection(task)">
+                            <label class="form-check-label small text-muted">Select</label>
+                        </div>
+
                         <!-- Normal Title & Details View -->
                         <div ng-if="!task.isEditing">
                             <span ng-class="{'text-decoration-line-through text-muted': task.completed}" class="fw-bold fs-6">
                                 {{ task.title }}
                             </span>
                             <div class="text-muted small">
-                                <span>Due: {{ task.due_date | date:'yyyy-MM-dd' }}</span> | 
+                                <span>Due: {{ task.due_date | date:'yyyy-MM-dd' }}</span> |
                                 <span class="badge bg-secondary text-uppercase">{{ task.priority || 'medium' }}</span>
                             </div>
                         </div>
@@ -93,14 +120,10 @@
                     <!-- Action Buttons -->
                     <div class="ms-3 d-flex align-items-center gap-1">
                         <!-- Assign Rules Button -->
-                        <button class="btn btn-sm btn-outline-info" ng-click="openAssignRules(task)">
+                        <button class="btn btn-sm btn-info" ng-click="openAssignRules(task)">
                             Assign Rules
                         </button>
-
-                        <!-- Status Toggle Button -->
-                        <button class="btn btn-sm btn-outline-success" ng-click="toggleTask(task)">
-                            {{ task.completed ? 'Completed' : 'Pending' }}
-                        </button>
+                        <button class="btn btn-sm btn-warning" ng-click="viewEligibleUsers(task)">Eligible Users</button>
 
                         <!-- Edit Button -->
                         <button ng-if="!task.isEditing" class="btn btn-sm btn-outline-primary" ng-click="startEdit(task)">
@@ -122,7 +145,7 @@
                 <!-- Rules Management Panel (Context-Aware UX) -->
                 <div ng-if="task.showRulesPanel" class="mt-3 p-3 border rounded bg-light">
                     <h6 class="fw-bold text-primary mb-2">Assign Rules for: {{ task.title }}</h6>
-                    
+
                     <!-- Add Rule Subform -->
                     <div class="row g-2 mb-3">
                         <!-- 1. Attribute Selection -->
@@ -219,6 +242,39 @@
                     </div>
                     <div ng-if="!task.rules || task.rules.length === 0" class="text-muted small italic">
                         No rules added yet for this task.
+                    </div>
+                </div>
+
+                <!-- Eligible Users Panel -->
+                <div ng-if="task.showEligiblePanel" class="mt-3 p-3 border rounded bg-light">
+                    <h6 class="fw-bold text-warning mb-2">Eligible Users for: {{ task.title }}</h6>
+
+                    <div ng-if="task.loadingEligible" class="text-center py-2">
+                        <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
+                        <span class="text-muted ms-2">Loading eligible users...</span>
+                    </div>
+
+                    <table ng-if="!task.loadingEligible && task.eligibleUsers.length > 0" class="table table-sm table-bordered bg-white mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Experience</th>
+                                <th>Location</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="user in task.eligibleUsers track by user.id">
+                                <td>{{ user.name }}</td>
+                                <td>{{ user.department }}</td>
+                                <td>{{ user.years_experience }} yrs</td>
+                                <td>{{ user.location }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div ng-if="!task.loadingEligible && task.eligibleUsers.length === 0" class="text-muted small">
+                        No eligible users found for this task's current rules.
                     </div>
                 </div>
 

@@ -25,7 +25,7 @@ class TaskAssignmentRuleObserver
 
     protected function evaluateTask(TaskAssignmentRule $taskRule): void
     {
-        Log::info('Observer Called...');
+        //Log::info('Observer Called...');
         if ($taskRule) {
             DB::afterCommit(function () use ($taskRule) {
                 AssignEligibleUsersJob::dispatch($taskRule->task);

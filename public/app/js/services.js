@@ -81,7 +81,18 @@ angular.module('taskApp')
 
             deleteTask: function (id) {
                 return $http.delete('/api/tasks/' + id);
+            },
+
+            getEligibleUsers: function (taskId) {
+                return $http.get('/api/tasks/' + taskId + '/eligible-users');
+            },
+
+            recomputeEligibility: function (taskIds) {
+                var payload = (taskIds && taskIds.length) ? { task_ids: taskIds } : {};
+                return $http.post('/api/tasks/recompute-eligibility', payload);
             }
+
+
         };
     }
 ])

@@ -11,14 +11,17 @@ use App\Models\Task;
 use App\Models\User;
 use App\Traits\ApiResponse;
 use Whoops\Run;
-
+use App\Services\RuleEngineService;
 
 class TaskController extends Controller
 {
     use ApiResponse;
+
+    public function __construct(private RuleEngineService $ruleEngine) {}
     /**
      * Display a listing of the resource.
      */
+    
     public function index(Request $request)
     {
         $tasks = Task::with([
@@ -103,5 +106,26 @@ class TaskController extends Controller
             'last_page' => $eligibleTasks->lastPage(),
         ],
         ], 200);
+    }
+    public function eligibleUsers($id){
+        $task = Task::findOrFail($id);
+        $users = $this->ruleEngine->getAllEligibleUsers($task);
+        return response()->json([
+            'task_id' => $task->id,
+            'count'   => $users->count(),
+            'data'    => $users,
+        ]);
+    }
+    public function recomputeEligibility(Request $request)
+    {
+        $taskIds = $request->task_ids??[];
+        $taskIds = $taskIds?array_unique($taskIds):[];
+        $result = $this->ruleEngine->recomputeForTasks($taskIds);
+        return response()->json([
+            'message'         => 'Eligibility recomputed',
+            'scope'           => !empty($taskIds) ? 'selected' : 'all_open',
+            'tasks_processed' => $result['processed'],
+            'tasks_failed'    => $result['failed'],
+        ]);
     }
 }

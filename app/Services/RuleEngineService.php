@@ -7,7 +7,7 @@ use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-
+use Illuminate\Support\Facades\Redis;
 class RuleEngineService
 {
     private const NUMERIC_ATTRIBUTES = ['minimum_experience', 'maximum_active_tasks'];
@@ -25,7 +25,7 @@ class RuleEngineService
         if ($conditions->isEmpty()) {
             return null;
         }
-        Log::info('test');
+        //Log::info('test');
         $query = User::query()->where('role', 'user');
  
         foreach ($conditions as $rule) {
@@ -61,16 +61,54 @@ class RuleEngineService
     }
     public function evaluateUser(User $user): void
     {
-        Log::info('Evaluate User method running..');
-        Log::info('Evaluate User started', [
-            'user_id' => $user->id,
-        ]);
-        // $rules = TaskAssignmentRule::query()
-        //         ->where(function ($query) use ($user){
-        //             $query->where
-        //         });
-        // ;
+        Log::info('Evalaute User');
         Task::query()
+            ->where('assigned_to', $user->id)
+            ->whereIn('status', ['todo', 'in_progress'])
+            ->with('taskRules')
+            ->chunkById(500, function ($tasks) use ($user) {
+                foreach ($tasks as $task) {
+
+                    if (!$this->userMatchesAllRules($user, $task->taskRules)) {
+
+                        // Current user is no longer eligible.
+                        // Don't immediately assign another user here yet.
+
+                        $task->update([
+                            'assigned_to' => null,
+                            'assignment_pending' => true,
+                        ]);
+                    }
+                }
+            });
+        $taskIds = TaskAssignmentRule::query()
+                    ->select('task_id')
+                    ->where('rule_operator','=')
+                    ->where(function ($query) use ($user) {
+                        $query
+                            ->where(function ($q) use ($user) {
+                                $q->where('rule_attribute', 'department')
+                                ->where('rule_value', $user->department);
+                            })
+                            ->orWhere(function ($q) use ($user) {
+                                $q->where('rule_attribute', 'location')
+                                ->where('rule_value', $user->location);
+                            })
+                            ->orWhere(function ($q) use ($user) {
+                                $q->where('rule_attribute', 'minimum_experience')
+                                ->where('rule_value', $user->years_experience);
+                            });
+                    })
+                    ->groupBy('task_id')
+                    ->havingRaw('COUNT(DISTINCT rule_attribute) = 3')
+                    ->pluck('task_id');
+        //Log::info("Tasks {$taskIds}");
+        if ($taskIds->isEmpty()) {
+            //Log::info("No candidate tasks found for user {$user->id}");
+            return;
+        }
+        Task::query()
+        ->whereIn('id',$taskIds)
         ->where('assignment_pending',true)
         ->with('taskRules')
         ->chunkById(500, function ($tasks) use ($user) {
@@ -133,7 +171,7 @@ class RuleEngineService
                     'assignment_pending' => false,
                     'status' => 'todo'
                 ]);
-                Log::info("Task {$task->id} assigned to user {$user->id} after profile update.");
+                //Log::info("Task {$task->id} assigned to user {$user->id} after profile update.");
 
             }
         });
@@ -186,8 +224,8 @@ class RuleEngineService
     }
     public function evaluateTask(Task $task): void
     {
-        Log::info($task);
-        Log::info($task->taskRules);
+        //Log::info($task);
+        //Log::info($task->taskRules);
         $task->load('taskRules');
         if($task->taskRules->isEmpty())
         {
@@ -202,7 +240,7 @@ class RuleEngineService
         {
             $currentUser = User::find($task->assigned_to);
             if ($currentUser && $this->userMatchesAllRules($currentUser, $task->taskRules)) {
-                Log::info('Current User still matches the rules..');
+                //Log::info('Current User still matches the rules..');
                 return;
             }
         }
@@ -213,7 +251,7 @@ class RuleEngineService
         $user = $this->findEligibleUser($task);
         if(!$user)
         {
-            Log::info("No eligible user found for task {$task->id}");
+            //Log::info("No eligible user found for task {$task->id}");
             $task->update([
                 'assigned_to' => null,
                 'assignment_pending' => true,
@@ -226,12 +264,12 @@ class RuleEngineService
             'status' => 'todo',
         ]);
 
-        Log::info("Task {$task->id} Assigned to {$user->id}");
+        //Log::info("Task {$task->id} Assigned to {$user->id}");
 
     }
     private function userMatchesAllRules(User $user,Collection $rules): bool
     {
-        Log::info("Evaluating the user {$user->id} and rules {$rules}");
+        //Log::info("Evaluating the user {$user->id} and rules {$rules}");
         foreach ($rules as $rule) {
             if ($rule->rule_attribute === 'maximum_active_tasks') {
                 if (!$this->userMatchesActiveTaskRule($user, $rule)) {
@@ -266,13 +304,59 @@ class RuleEngineService
             '<'  => $activeTasksCount < $ruleValue,
             default => false,
         };
-        Log::info('Active task rule evaluation', [
-            'user_id' => $user->id,
-            'active_tasks' => $activeTasksCount,
-            'operator' => $rule->rule_operator,
-            'rule_value' => $ruleValue,
-            'matched' => $result,
-        ]);
         return $result;
     }
+    public function getAllEligibleUsers(Task $task) :Collection
+    {
+        $conditions = $task->taskRules()->get();
+        if ($conditions->isEmpty()) {
+            return collect();
+        }
+        $query = User::query()->where('role', 'user');
+        foreach ($conditions as $rule) {
+            if ($rule->rule_attribute === 'maximum_active_tasks') {
+                continue;
+            }
+            $column = self::ATTRIBUTE_COLUMN_MAP[$rule->rule_attribute] ?? null;
+            if (! $column) {
+                continue;
+            }
+            $value = in_array($rule->rule_attribute, self::NUMERIC_ATTRIBUTES, true)
+                ? (int) $rule->rule_value
+                : $rule->rule_value;
+            $query->where($column, $rule->rule_operator, $value);
+        }
+        return $query->orderBy('id', 'asc')->get()
+            ->filter(fn (User $user) => $this->userMatchesAllRules($user, $conditions))
+            ->values();
+
+    }
+
+    public function recomputeForTasks(array $taskIds = []): array
+    {
+        Log::info($taskIds);
+        $processed = 0;
+        $failed = [];
+        $query = !empty($taskIds)
+        ? Task::whereIn('id', $taskIds)
+        : Task::whereIn('status', ['todo', 'in_progress']);
+
+        $query->chunkById(200, function ($tasks) use (&$processed, &$failed) {
+            foreach ($tasks as $task) {
+                try {
+                $this->evaluateTask($task);
+                $processed++;
+                } catch (\Throwable $e) {
+                    $failed[] = $task->id;
+                    Log::error("Eligibility recompute failed for task {$task->id}: {$e->getMessage()}");
+                }
+            }
+        });
+        return [
+            'processed' => $processed,
+            'failed'    => $failed,
+        ];
+
+    }
+    
 }

@@ -60,6 +60,8 @@
   <!-- AngularJS Application Modules -->
   <script src="{{ asset('app/js/app.js') }}"></script>
   <script src="{{ asset('app/js/services.js') }}"></script>
+  @vite('resources/js/app.js')
   <script src="{{ asset('app/js/controllers.js') }}"></script>
+
 </body>
 </html>

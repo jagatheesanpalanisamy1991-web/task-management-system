@@ -24,7 +24,7 @@ class UserObserver
     {
         $relevantAttributes = ['department', 'years_experience', 'location'];
         if ($user->wasChanged($relevantAttributes)) {
-            Log::info('User observer calling..');
+            //Log::info('User observer calling..');
             DB::afterCommit(function () use ($user) {
                 EvaluateUserTaskRules::dispatch($user);
             });
