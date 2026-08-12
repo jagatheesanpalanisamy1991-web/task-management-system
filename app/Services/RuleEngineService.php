@@ -8,6 +8,8 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 class RuleEngineService
 {
     private const NUMERIC_ATTRIBUTES = ['minimum_experience', 'maximum_active_tasks'];
@@ -17,11 +19,12 @@ class RuleEngineService
         'location' => 'location',
         // 'maximum_active_tasks' => 'active_tasks_count',
     ];
- 
-    public function findEligibleUser(Task $task): ?User
+    private const ACTIVE_TASKS_CACHE_TTL = 60;
+
+    public function findEligibleUser(Task $task,?Collection $conditions = null): ?User
     {
-        $conditions = $task->taskRules()->get(); // Fetch the associated rules for the task
- 
+        //$conditions = $task->taskRules()->get(); // Fetch the associated rules for the task
+
         if ($conditions->isEmpty()) {
             return null;
         }
@@ -50,12 +53,15 @@ class RuleEngineService
         $users = $query
             ->orderBy('id', 'asc')
             ->get();
-
+        $activeTaskCounts = $this->getActiveTasksCountBatch($users->pluck('id')->all());
         foreach($users as $user)
         {
-         if ($this->userMatchesAllRules($user, $conditions)) {
+        //  if ($this->userMatchesAllRules($user, $conditions)) {
+        //     return $user;
+        //  } 
+         if ($this->userMatchesAllRules($user, $conditions, $activeTaskCounts[$user->id] ?? 0)) {
             return $user;
-         }   
+        }  
         }
         return null;
     }
@@ -226,9 +232,13 @@ class RuleEngineService
     {
         //Log::info($task);
         //Log::info($task->taskRules);
-        $task->load('taskRules');
-        if($task->taskRules->isEmpty())
-        {
+        //$task->load('taskRules');
+        $conditions = $task->taskRules;
+        // if($task->taskRules->isEmpty())
+        // {
+        //     return;
+        // }
+        if ($conditions->isEmpty()) {
             return;
         }
         /**
@@ -238,17 +248,38 @@ class RuleEngineService
          */
         if(!$task->assignment_pending && $task->assigned_to)
         {
-            $currentUser = User::find($task->assigned_to);
-            if ($currentUser && $this->userMatchesAllRules($currentUser, $task->taskRules)) {
-                //Log::info('Current User still matches the rules..');
-                return;
+            //$currentUser = User::select(['id','department','location','years_experience'])->find($task->assigned_to);
+            $currentUser = $task->assignee;
+            if ($currentUser) {
+                //$start = microtime(true);
+                $count = $this->getActiveTasksCount($currentUser);
+                // Log::info('getActiveTasksCount', [
+                //     'task_id' => $task->id,
+                //     'user_id' => $currentUser->id,
+                //     'seconds' => microtime(true) - $start,
+                // ]);
+                //$start = microtime(true);
+                if ($this->userMatchesAllRules($currentUser, $conditions, $count)) {
+                    // Log::info('userMatchesAllRules', [
+                    //     'task_id' => $task->id,
+                    //     'user_id' => $currentUser->id,
+                    //     'seconds' => microtime(true) - $start,
+                    // ]);
+                    return;
+                }
+                
             }
         }
         /**
          * Current assigned user not eligible 
          * check the new eligible user matching with the rules
          */
-        $user = $this->findEligibleUser($task);
+        //$start = microtime(true);
+        $user = $this->findEligibleUser($task,$conditions);
+        // Log::info('findEligibleUser', [
+        //     'task_id' => $task->id,
+        //     'seconds' => microtime(true) - $start,
+        // ]);
         if(!$user)
         {
             //Log::info("No eligible user found for task {$task->id}");
@@ -267,12 +298,13 @@ class RuleEngineService
         //Log::info("Task {$task->id} Assigned to {$user->id}");
 
     }
-    private function userMatchesAllRules(User $user,Collection $rules): bool
+    private function userMatchesAllRules(User $user,Collection $rules,?int $activeTasksCount = null): bool
     {
         //Log::info("Evaluating the user {$user->id} and rules {$rules}");
         foreach ($rules as $rule) {
             if ($rule->rule_attribute === 'maximum_active_tasks') {
-                if (!$this->userMatchesActiveTaskRule($user, $rule)) {
+                $count = $activeTasksCount ?? $this->getActiveTasksCount($user);
+                if (!$this->userMatchesActiveTaskRule($count, $rule)) {
                     return false;
                 }
 
@@ -287,13 +319,22 @@ class RuleEngineService
     }
     private function getActiveTasksCount(User $user): int
     {
-        return Task::query()
+        $cacheKey = "user:{$user->id}:active_tasks_count";
+        // return Task::query()
+        //     ->where('assigned_to', $user->id)
+        //     ->whereIn('status', ['todo', 'in_progress'])
+        //     ->count();
+        //Log::info($cacheKey);
+        return Cache::remember($cacheKey, 60, function () use ($user){
+            return Task::query()
             ->where('assigned_to', $user->id)
             ->whereIn('status', ['todo', 'in_progress'])
             ->count();
+        });
     }
-    private function userMatchesActiveTaskRule(User $user,TaskAssignmentRule $rule){
-        $activeTasksCount = $this->getActiveTasksCount($user);
+    private function userMatchesActiveTaskRule(int $activeTasksCount,TaskAssignmentRule $rule){
+        //$activeTasksCount = $this->getActiveTasksCount($user);
+
         $ruleValue = (int) $rule->rule_value;
         $result = match ($rule->rule_operator) {
             '='  => $activeTasksCount === $ruleValue,
@@ -326,29 +367,39 @@ class RuleEngineService
                 : $rule->rule_value;
             $query->where($column, $rule->rule_operator, $value);
         }
-        return $query->orderBy('id', 'asc')->get()
-            ->filter(fn (User $user) => $this->userMatchesAllRules($user, $conditions))
-            ->values();
+        $users = $query->orderBy('id','asc')->get();
+        $activeTaskCounts = $this->getActiveTasksCountBatch($users->pluck('id')->all());
+
+        // return $query->orderBy('id', 'asc')->get()
+        //     ->filter(fn (User $user) => $this->userMatchesAllRules($user, $conditions))
+        //     ->values();
+        return $users->filter(function (User $user) use ($conditions, $activeTaskCounts){
+                return $this->userMatchesAllRules(
+            $user,
+            $conditions,
+            $activeTaskCounts[$user->id] ?? 0);
+        })->values();
+        
 
     }
 
     public function recomputeForTasks(array $taskIds = []): array
     {
-        Log::info($taskIds);
+        //Log::info($taskIds);
         $processed = 0;
         $failed = [];
         $query = !empty($taskIds)
         ? Task::whereIn('id', $taskIds)
         : Task::whereIn('status', ['todo', 'in_progress']);
 
-        $query->chunkById(200, function ($tasks) use (&$processed, &$failed) {
+        $query->with(['taskRules','assignee:id,department,location,years_experience'])->chunkById(500, function ($tasks) use (&$processed, &$failed) {
             foreach ($tasks as $task) {
                 try {
                 $this->evaluateTask($task);
                 $processed++;
                 } catch (\Throwable $e) {
                     $failed[] = $task->id;
-                    Log::error("Eligibility recompute failed for task {$task->id}: {$e->getMessage()}");
+                    //Log::error("Eligibility recompute failed for task {$task->id}: {$e->getMessage()}");
                 }
             }
         });
@@ -356,7 +407,21 @@ class RuleEngineService
             'processed' => $processed,
             'failed'    => $failed,
         ];
-
+ 
     }
-    
+    private function getActiveTasksCountBatch(array $userIds): array
+    {
+        if (empty($userIds)) {
+            return [];
+        }
+
+        // One grouped query for ALL candidates, instead of N separate calls
+        return Task::query()
+            ->select('assigned_to', DB::raw('COUNT(*) as active_count'))
+            ->whereIn('assigned_to', $userIds)
+            ->whereIn('status', ['todo', 'in_progress'])
+            ->groupBy('assigned_to')
+            ->pluck('active_count', 'assigned_to')
+            ->toArray();
+    }
 }
